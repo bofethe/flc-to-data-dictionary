@@ -1,0 +1,51 @@
+from arcgis.gis import GIS
+from arcgis.features import FeatureLayerCollection
+import pandas as pd
+import datetime
+import re
+
+now = datetime.datetime.now().strftime("%Y%m%d%H%M")
+
+# Connect to AGOL
+gis = GIS("Pro")
+
+# Get the feature layer collection from the item
+id = "0e28ef312008491aa86f90bd9ca7c706" #NOTE Replace with your item ID
+
+item = gis.content.get(id)
+flc = FeatureLayerCollection.fromitem(item)
+
+# Get each layer's field information
+with pd.ExcelWriter(f"{item.title}_DataDictionary_{now}.xlsx") as writer:
+    for layer in flc.layers:
+        layer_name = layer.properties.name or f"Layer_{layer.properties.id}"
+        fields = layer.properties.fields
+
+        field_info = []
+        for field in fields:
+
+            # get domain values if they exist
+            domain_str = None
+            domain = field.get("domain")
+            if domain:
+                if domain.get("type") == "codedValue":
+                    domain_str = "; ".join(f"{cv['code']}: {cv['name']}" for cv in domain.get("codedValues", []))
+                elif domain.get("type") == "range":
+                    domain_str = f"Range: {domain.get('minValue')} to {domain.get('maxValue')}"
+
+            field_info.append({
+                "Field Name": field['name'],
+                "Alias": field.get('alias', None),
+                "Field Type": field['type'],
+                "Length": field.get('length', None),
+                "Nullable": field.get('nullable', None),
+                "Editable": field.get('editable', None),
+                "Domain Name": field.get('domain', {}).get('name') if field.get('domain') else None,
+                "Domain Values": domain_str,
+                "Default Value": field.get('defaultValue', None)
+            })
+
+        # clean field names and write to Excel
+        df = pd.DataFrame(field_info)
+        clean_name = clean_name = re.sub(r'[^A-Za-z0-9 _]', '', layer_name)[:31] #xlsx max length for sheet name
+        df.to_excel(writer, sheet_name=clean_name, index=False)

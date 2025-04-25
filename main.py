@@ -10,19 +10,20 @@ now = datetime.datetime.now().strftime("%Y%m%d%H%M")
 # Connect to AGOL
 gis = GIS("home")
 
-def flc_to_data_dict(id, dir=None):
+def flc_to_data_dict(id, directory=None):
     '''
     This function takes an item ID of a Feature Layer Collection 
     and creates an Excel file with the data dictionary for each layer 
     in the collection.
 
     :param int id: Item ID of the Feature Layer Collection.
-    :param str (Optional) dir: Directory to save the Excel file. If not provided,
+    :param str (Optional) directory: Directory to save the Excel file. If not provided,
                                 the file will be saved in the current working directory.
     '''
     item = gis.content.get(id)
-    if dir:
-        fpath = os.path.join(dir, f"{item.title}_DataDictionary_{now}.xlsx")
+    now = datetime.datetime.now().strftime("%Y%m%d%H%M")
+    if directory:
+        fpath = os.path.join(directory, f"{item.title}_DataDictionary_{now}.xlsx")
     else:
         fpath = f"{item.title}_DataDictionary_{now}.xlsx"
     flc = FeatureLayerCollection.fromitem(item)
@@ -61,5 +62,10 @@ def flc_to_data_dict(id, dir=None):
             df = pd.DataFrame(field_info)
             clean_name = re.sub(r'[^A-Za-z0-9 _]', '', layer_name)[:31] #xlsx max length for sheet name
             df.to_excel(writer, sheet_name=clean_name, index=False)
+            print('Finished!')
 
-flc_to_data_dict("0e28ef312008491aa86f90bd9ca7c706") #NOTE Replace with your item ID
+###NOTE: update this as needed ###
+item_id = '0e28ef312008491aa86f90bd9ca7c706'
+directory = None
+
+flc_to_data_dict(item_id, directory)
